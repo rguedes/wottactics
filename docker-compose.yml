@@ -1,0 +1,50 @@
+version: '3'
+services:
+  # mongo database
+  mongodb:
+    image: bitnami/mongodb:latest
+    restart: always
+    environment:
+      - MONGODB_ROOT_PASSWORD=root
+      - MONGODB_USERNAME=wottactics
+      - MONGODB_PASSWORD=wottactics
+      - MONGODB_DATABASE=wottactics
+    networks:
+      - internal
+  # redis server
+  redis:
+    image: 'bitnami/redis:latest'
+    environment:
+      - REDIS_PASSWORD=redis
+    networks:
+      - internal
+  # wottactis nodejs app
+  nodejs:
+    build:
+      context: .
+    depends_on:
+      - mongodb
+      - redis
+    links:
+      - mongodb
+      - redis
+    volumes:
+      - ./views:/usr/src/app/views
+      - ./public:/usr/src/app/public
+      - ./helper:/helper
+    networks:
+      - internal
+      - web
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.tatics.tls.certresolver=letsencrypt'
+      - 'traefik.http.routers.tatics.entrypoints=websecure'
+      - 'traefik.http.routers.tatics.rule=Host(`${HOST}`)'
+      - 'traefik.http.services.tatics.loadbalancer.server.port=8080'
+      - "traefik.http.middlewares.tatics.redirectscheme.scheme=https"
+
+networks:
+  internal:
+    driver: bridge
+  web:
+    external: true
